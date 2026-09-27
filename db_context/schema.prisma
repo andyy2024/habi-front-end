@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  moduleFormat  = "cjs"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  account   Account?
+}
+
+model Account {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  
+  // Se usa Decimal para evitar errores de precisión de punto flotante con dinero
+  balance   Decimal  @default(0.00) @db.Decimal(14, 2)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sentTransactions     Transaction[] @relation("SenderAccount")
+  receivedTransactions Transaction[] @relation("ReceiverAccount")
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  amount      Decimal  @db.Decimal(14, 2)
+  type        TxType
+  status      TxStatus @default(PENDING)
+  
+  senderId    String?
+  sender      Account? @relation("SenderAccount", fields: [senderId], references: [id])
+  
+  receiverId  String?
+  receiver    Account? @relation("ReceiverAccount", fields: [receiverId], references: [id])
+  
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+enum TxType {
+  DEPOSIT
+  TRANSFER
+}
+
+enum TxStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
